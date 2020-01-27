@@ -19,7 +19,8 @@
 ### Tables:
 
 #### Fact Tables
-** songplays **
+**songplays**
+- songplay_id serial (PK)
 - ts - timestamp of event
 - user_id - unique user id
 - level - type of membership for user
@@ -30,29 +31,29 @@
 - user_agent - method of interface to program
 
 #### Dimension Tables
-** user **
-- user_id - unique user id
+**user**
+- user_id - unique user id (PK)
 - first_name - first name of user
 - last_name - last_name of user
 - gender - gender of user
 - level - type of membership for user
 
-** song **
-- song_id - unique song id
+**song**
+- song_id - unique song id (PK)
 - title - title of song
 - artist_id - unique artist id
 - year - year of song release
 - duration - duration of song (in seconds?)
 
-** artist **
-- artist_id - unique artist id
+**artist**
+- artist_id - unique artist id (PK)
 - artist_name - name of artist
 - artist_location - location of artist
 - artist_latitude - lat of artist location
 - artist_longitude - long of artist location
 
-** time **
-- ts - timestamp of event
+**time**
+- ts - timestamp of event (PK)
 - hour - hour of ts
 - day - day of ts
 - week -  week of ts
