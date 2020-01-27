@@ -8,6 +8,7 @@ from sql_queries import *
 # Make sure to run create_tables.py script to have clean database and schema defined.
 
 def process_song_file(cur, filepath):
+    """ Takes a list of song files and populates tables for song and artist """
     # open song file
     df = pd.read_json(filepath, lines=True)
 
@@ -21,6 +22,7 @@ def process_song_file(cur, filepath):
 
 
 def process_log_file(cur, filepath):
+    """ Takes a list of log files and populates tables for user, time and songplay"""
     # open log file
     df = pd.read_json(filepath, lines=True)
 
@@ -63,6 +65,7 @@ def process_log_file(cur, filepath):
 
 
 def process_data(cur, conn, filepath, func):
+    """ Recursive search for path given to return all file paths for found JSON filetypes """
     # get all files matching extension from directory
     all_files = []
     for root, dirs, files in os.walk(filepath):
@@ -82,6 +85,7 @@ def process_data(cur, conn, filepath, func):
 
 
 def main():
+    """ Main function for ETL script """
     conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
     cur = conn.cursor()
 
