@@ -68,3 +68,7 @@ Purpose of the database is to create a database optimized for queries on song pl
 The songplays table allows the user to query and analyze song play usage by several different groupings.  Whether grouping is by membership type, location of users or usage length, 
 all of these are available by a simple query of the songplay fact table.  If more detailed analysis is requested, then a simple aggregation of the dimension tables will make it easy to 
 aggregate any sort of specific data necessary.
+
+## Improvements
+Since the data source was only partial for the songs, the majority of the records for the songplay table do not specify artist_id, song_id.  This prevented me from specifying the 
+aforementioned fields as foreign keys.  It would be nice to have a complete song library and to be able to specify the foreign key relationships properly.
