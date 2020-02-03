@@ -34,3 +34,7 @@ table3 = """
 """
 ```
 
+## Purpose of Project
+To get practice with creating denormalized databases on Apache Cassandra.  Source data is CSV which are loaded into Pandas, 
+cleaned and then loaded into the approriate database.  Test queries are run on the data to verify that data was inserted properly 
+and that partitioning key and clustering columns work as expected.
