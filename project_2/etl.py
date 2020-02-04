@@ -51,19 +51,19 @@ def process_csv_data(session, dirpath):
     
     print("Populate Tables with data...")
     # Create tables in new db and populate approriate data
-    query1 = "INSERT INTO music_app_history (artist_name, song_title, song_length, sessionId, itemInSession) "
+    query1 = "INSERT INTO music_app_history (sessionId, itemInSession, artist_name, song_title, song_length) "
     query1 = query1 + "VALUES(%s, %s, %s, %s, %s)"
     
-    query2 = "INSERT INTO user_app_history (artist_name, song_title, sessionId, itemInSession, first_name, last_name, userId) "
+    query2 = "INSERT INTO user_app_history (userId, sessionId, itemInSession, artist_name, song_title, first_name, last_name) "
     query2 = query2 + "VALUES(%s, %s, %s, %s, %s, %s, %s)"
 
-    query3 = "INSERT INTO song_app_history (artist_name, song_title, first_name, last_name, userId) "
-    query3 = query3 + "VALUES(%s, %s, %s, %s, %s)"
+    query3 = "INSERT INTO song_app_history (song_title, userId, first_name, last_name) "
+    query3 = query3 + "VALUES(%s, %s, %s, %s)"
     for row in full_df.itertuples(index=False):
         # Iterate through df once but load all tables in parallel
-        session.execute(query1, (row[0], row[9], row[5], row[8], row[3]))
-        session.execute(query2, (row[0], row[9], row[8], row[3], row[1], row[4], row[10]))
-        session.execute(query3, (row[0], row[9], row[1], row[4], row[10]))
+        session.execute(query1, (row[8], row[3], row[0], row[9], row[5]))
+        session.execute(query2, (row[10], row[8], row[3], row[0], row[9], row[1], row[4]))
+        session.execute(query3, (row[9], row[10], row[1], row[4]))
     print("All tables updated...")
     
 def main():
@@ -90,7 +90,7 @@ def main():
     # Create Tables for data
     query = """
         CREATE TABLE IF NOT EXISTS music_app_history 
-        (artist_name varchar, song_title varchar, song_length float, sessionId int, itemInSession int, PRIMARY KEY(sessionId, itemInSession))
+        (sessionId int, itemInSession int, artist_name varchar, song_title varchar, song_length float, PRIMARY KEY(sessionId, itemInSession))
     """
     try:
         session.execute(query)
@@ -99,7 +99,7 @@ def main():
 
     query2 = """
         CREATE TABLE IF NOT EXISTS user_app_history 
-        (artist_name varchar, song_title varchar, sessionId int, itemInSession int, first_name varchar, last_name varchar, userId int, PRIMARY KEY(userId, sessionId, itemInSession))
+        (userId int, sessionId int, itemInSession int, artist_name varchar, song_title varchar, first_name varchar, last_name varchar, PRIMARY KEY(userId, sessionId, itemInSession))
     """
     try:
         session.execute(query2)
@@ -108,7 +108,7 @@ def main():
  
     query3 = """
         CREATE TABLE IF NOT EXISTS song_app_history 
-        (artist_name varchar, song_title varchar, first_name varchar, last_name varchar, userId int, PRIMARY KEY(song_title, userId, artist_name))
+        (song_title varchar, userId int, artist_name varchar, first_name varchar, last_name varchar, PRIMARY KEY(song_title, userId))
     """
     try:
         session.execute(query3)

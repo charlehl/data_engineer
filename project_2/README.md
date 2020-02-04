@@ -18,19 +18,22 @@
 
 ### Tables:
 ```python
+# Description: Primary Key has two fields: sessionId is the partition key, and itemInSession is clustering key. Partitioning is done by sessionId and within that partition, rows are ordered by the itemInSession.
 table1 = """
     CREATE TABLE IF NOT EXISTS music_app_history 
-    (artist_name varchar, song_title varchar, song_length float, sessionId int, itemInSession int, PRIMARY KEY(sessionId, itemInSession))
+    (sessionId int, itemInSession int, artist_name varchar, song_title varchar, song_length float, PRIMARY KEY(sessionId, itemInSession))
 """
 
+# Description: Primary Key has three fields: userId is the partition key, and sessionId and itemInSession are the clustering keys. Partitioning is done by userId and within that partition, rows are ordered by the sessionId and then by itemInSession.
 table2 = """
     CREATE TABLE IF NOT EXISTS user_app_history 
-    (artist_name varchar, song_title varchar, sessionId int, itemInSession int, first_name varchar, last_name varchar, userId int, PRIMARY KEY(userId, sessionId, itemInSession))
+    (userId int, sessionId int, itemInSession int, artist_name varchar, song_title varchar, first_name varchar, last_name varchar, PRIMARY KEY(userId, sessionId, itemInSession))
 """
 
+# Description: Primary Key has two fields: song_title is the partition key, and userId is the clustering key. Partitioning is done by song_title and within that partition, rows are ordered by the userId.
 table3 = """
     CREATE TABLE IF NOT EXISTS song_app_history 
-    (artist_name varchar, song_title varchar, first_name varchar, last_name varchar, userId int, PRIMARY KEY(song_title, userId, artist_name))
+    (song_title varchar, userId int, artist_name varchar, first_name varchar, last_name varchar, PRIMARY KEY(song_title, userId))
 """
 ```
 

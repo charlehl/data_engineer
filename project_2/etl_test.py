@@ -21,9 +21,9 @@ def etl_run_test_queries(session):
     query_verify = "SELECT artist_name, song_title, song_length FROM music_app_history WHERE sessionId=338 AND itemInSession=4"
     try:
         rows = session.execute(query_verify)
-        print(query_verify)
+        print(query_verify + "\n")
         for row in rows:
-            print (row.artist_name, row.song_title, row.song_length)
+            print (f"{row.artist_name} | {row.song_title} | {row.song_length}")
         print("\n")
     except Exception as e:
         print(e)
@@ -32,9 +32,9 @@ def etl_run_test_queries(session):
     query_verify = "SELECT artist_name, song_title, first_name, last_name FROM user_app_history WHERE userId=10 AND sessionId=182"
     try:
         rows = session.execute(query_verify)
-        print(query_verify)
+        print(query_verify + "\n")
         for row in rows:
-            print (row.artist_name, row.song_title, row.first_name, row.last_name)
+            print (f"{row.artist_name} | {row.song_title} | {row.first_name} | {row.last_name}")
         print("\n")
     except Exception as e:
         print(e)
@@ -42,9 +42,9 @@ def etl_run_test_queries(session):
     query_verify = "SELECT first_name, last_name FROM song_app_history WHERE song_title = 'All Hands Against His Own'"
     try:
         rows = session.execute(query_verify)
-        print(query_verify)
+        print(query_verify + "\n")
         for row in rows:
-            print (row.first_name, row.last_name)
+            print (f"{row.first_name} | {row.last_name}")
         print("\n")
     except Exception as e:
         print(e)
