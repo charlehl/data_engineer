@@ -6,39 +6,141 @@
 - Run queries in test_etl.ipynb to verify ETL
 
 ## File Overview
-- etl.py - ETL script to read CSV in event_data folder and to load into an Apache Cassandra DB (sparkify_db)
-- etl_test.py - Script to run test queries on data loaded by etl script.  Drops tables after running.
-- event_datafile_new.csv - csv file generated using the project template
-- my_event_datafile_new.csv - csv file generated using pandas instead of csv read/writer method in project template.
-- Project_1B_Project_Template.ipynb - Notebook used to test etl methods
+- etl.py - ETL script to read song and log data from S3 and load into a star schema DB in Amazon Redshift.
+- create_tables.py - Contains SQL code for creating table, loading data into tables and also droping tables.
+- test_etl.ipynb - Jupyter notebook containing queries to test data loaded from S3 to Amazon Redshift.
+- dwh.cfg - Contains config for AWS and name for DB.  Will not be checked into repository for security purposes.
+- project3_test.ipynb - Jupyter notebook to run experiments for ETL and develop code.
 - README.md - Markdown README for project
 
 ## Schema Overview
 
-### Database: sparkify_db
+### Database: dwh
 
 ### Tables:
 ```python
-# Description: Primary Key has two fields: sessionId is the partition key, and itemInSession is clustering key. Partitioning is done by sessionId and within that partition, rows are ordered by the itemInSession.
-table1 = """
-    CREATE TABLE IF NOT EXISTS music_app_history 
-    (sessionId int, itemInSession int, artist_name varchar, song_title varchar, song_length float, PRIMARY KEY(sessionId, itemInSession))
-"""
+staging_events_table_create= ("""
+CREATE TABLE IF NOT EXISTS events (
+    songplay_id BIGINT IDENTITY(0,1),
+    artist VARCHAR,
+    auth VARCHAR,
+    firstName VARCHAR,
+    gender VARCHAR,
+    itemInSession INTEGER,
+    lastName VARCHAR,
+    length REAL,
+    level VARCHAR,
+    location VARCHAR,
+    method VARCHAR,
+    page VARCHAR,
+    registration FLOAT8,
+    sessionId INTEGER,
+    song VARCHAR,
+    status INTEGER,
+    ts BIGINT,
+    userAgent VARCHAR,
+    userId INT,
+    PRIMARY KEY(songplay_id)
+)
+""")
 
-# Description: Primary Key has three fields: userId is the partition key, and sessionId and itemInSession are the clustering keys. Partitioning is done by userId and within that partition, rows are ordered by the sessionId and then by itemInSession.
-table2 = """
-    CREATE TABLE IF NOT EXISTS user_app_history 
-    (userId int, sessionId int, itemInSession int, artist_name varchar, song_title varchar, first_name varchar, last_name varchar, PRIMARY KEY(userId, sessionId, itemInSession))
-"""
+staging_songs_table_create = ("""
+CREATE TABLE IF NOT EXISTS song_logs (
+    num_songs INTEGER,
+    artist_id VARCHAR,
+    artist_latitude REAL,
+    artist_longitude REAL,
+    artist_location VARCHAR,
+    artist_name VARCHAR, 
+    song_id VARCHAR,
+    title VARCHAR,
+    duration REAL,
+    year INTEGER,
+    PRIMARY KEY(song_id)
+)
+""")
 
-# Description: Primary Key has two fields: song_title is the partition key, and userId is the clustering key. Partitioning is done by song_title and within that partition, rows are ordered by the userId.
-table3 = """
-    CREATE TABLE IF NOT EXISTS song_app_history 
-    (song_title varchar, userId int, artist_name varchar, first_name varchar, last_name varchar, PRIMARY KEY(song_title, userId))
-"""
+songplay_table_create = ("""
+CREATE TABLE IF NOT EXISTS songplays
+(
+    songplay_id BIGINT,
+    start_time BIGINT NOT NULL,
+    user_id INTEGER NOT NULL,
+    level VARCHAR,
+    song_id VARCHAR,
+    artist_id VARCHAR,
+    session_id INTEGER,
+    location VARCHAR,
+    user_agent VARCHAR,
+    PRIMARY KEY(songplay_id),
+    FOREIGN KEY(start_time) REFERENCES times(start_time),
+    FOREIGN KEY(user_id) REFERENCES users(user_id),
+    FOREIGN KEY(song_id) REFERENCES songs(song_id),
+    FOREIGN KEY(artist_id) REFERENCES artists(artist_id)
+)
+DISTSTYLE KEY
+DISTKEY(user_id)
+COMPOUND SORTKEY(session_id, start_time);
+""")
+
+user_table_create = ("""
+CREATE TABLE IF NOT EXISTS users (
+    user_id INTEGER NOT NULL, 
+    first_name VARCHAR, 
+    last_name VARCHAR, 
+    gender VARCHAR, 
+    level VARCHAR,
+    PRIMARY KEY(user_id)
+)
+DISTSTYLE AUTO
+COMPOUND SORTKEY(last_name, first_name);
+""")
+
+song_table_create = ("""
+CREATE TABLE IF NOT EXISTS songs (
+    song_id VARCHAR, 
+    title VARCHAR, 
+    artist_id VARCHAR, 
+    year INTEGER, 
+    duration REAL,
+    PRIMARY KEY(song_id)
+)
+DISTSTYLE AUTO
+SORTKEY(year);
+""")
+
+artist_table_create = ("""
+CREATE TABLE IF NOT EXISTS artists
+(
+    artist_id VARCHAR, 
+    name VARCHAR, 
+    location VARCHAR, 
+    lattitude REAL, 
+    longitude REAL,
+    PRIMARY KEY(artist_id)
+)
+DISTSTYLE AUTO
+SORTKEY(name);
+""")
+
+time_table_create = ("""
+CREATE TABLE IF NOT EXISTS times
+(
+    start_time BIGINT NOT NULL, 
+    hour INTEGER, 
+    day INTEGER, 
+    week INTEGER, 
+    month INTEGER, 
+    year INTEGER, 
+    weekday INTEGER,
+    PRIMARY KEY(start_time)
+)
+DISTSTYLE KEY
+DISTKEY(start_time)
+SORTKEY(start_time);
+""")
 ```
 
 ## Purpose of Project
-To get practice with creating denormalized databases on Apache Cassandra.  Source data is CSV which are loaded into Pandas, 
-cleaned and then loaded into the approriate database.  Test queries are run on the data to verify that data was inserted properly 
-and that partitioning key and clustering columns work as expected.
+To get practice with copying data from an S3 bucket to a staging table and then transfering the data to star-schema based database.
+All is done in Python environment using boto3 to interact with AWS.  
