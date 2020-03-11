@@ -35,6 +35,13 @@ def create_spark_session():
         .builder \
         .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
         .getOrCreate()
+
+    sc=spark.sparkContext
+    hadoop_conf=sc._jsc.hadoopConfiguration()
+    hadoop_conf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+    hadoop_conf.set("fs.s3a.awsAccessKeyId", os.getenv('AWS_ACCESS_KEY_ID'))
+    hadoop_conf.set("fs.s3a.awsSecretAccessKey", os.getenv('AWS_SECRET_ACCESS_KEY'))
+
     return spark
 
 @udf
@@ -69,7 +76,7 @@ def process_song_data(spark, input_data, output_data):
     
     print(f"Writing to: {output_data+'song/'}...")
     # write songs table to parquet files partitioned by year and artist
-    songs_table.write.mode("overwrite").partitionBy("year", "artist_id").parquet(output_data+"song/")
+    #songs_table.write.mode("overwrite").partitionBy("year", "artist_id").parquet(output_data+"song/songs.parquet")
     print(f"Writing to: {output_data+'song/'} completed.")
     
     
@@ -81,7 +88,7 @@ def process_song_data(spark, input_data, output_data):
     
     print(f"Writing to: {output_data+'artist/'}...")
     # write artists table to parquet files
-    artists_table.write.mode("overwrite").parquet(output_data+"artist/")
+    #artists_table.write.mode("overwrite").parquet(output_data+"artist/artists.parquet")
     print(f"Writing to: {output_data+'artist/'} completed.")
     
     # Create temp view to create songplay_table later
@@ -116,7 +123,7 @@ def process_log_data(spark, input_data, output_data):
     # Window function will number rows for the userId
     users_table = users_table.withColumn("row", F.row_number().over(w1))
     # Only pick up the latest for each userId partition
-    users_table = user_table.filter(users_table["row"] == 1).drop("row", "ts")
+    users_table = users_table.filter(users_table["row"] == 1).drop("row", "ts")
     # Rename columns to desired values
     users_table = users_table.withColumnRenamed("userId", "user_id")\
                  .withColumnRenamed("firstName", "first_name")\
@@ -124,7 +131,7 @@ def process_log_data(spark, input_data, output_data):
     
     print(f"Writing to: {output_data+'user/'}...")
     # write users table to parquet files
-    users_table.write.mode("overwrite").parquet(output_data+"user/")
+    #users_table.write.mode("overwrite").parquet(output_data+"user/users.parquet")
     print(f"Writing to: {output_data+'user/'} completed.")
 
     # create timestamp column from original timestamp column
@@ -143,7 +150,7 @@ def process_log_data(spark, input_data, output_data):
     
     print(f"Writing to: {output_data+'time/'}...")
     # write time table to parquet files partitioned by year and month
-    time_table.write.mode("overwrite").partitionBy("year", "month").parquet(output_data+"time/")
+    #time_table.write.mode("overwrite").partitionBy("year", "month").parquet(output_data+"time/times.parquet")
     print(f"Writing to: {output_data+'time/'} completed.")
 
     # read in song data to use for songplays table
@@ -177,7 +184,7 @@ def process_log_data(spark, input_data, output_data):
 
     print(f"Writing to: {output_data+'songplay/'}...")
     # write songplays table to parquet files partitioned by year and month
-    songplays_table.write.mode("overwrite").partitionBy("year", "month").parquet(output_data+"songplay/")
+    #songplays_table.write.mode("overwrite").partitionBy("year", "month").parquet(output_data+"songplay/songplays.parquet")
     print(f"Writing to: {output_data+'songplay/'} completed.")
 
 
