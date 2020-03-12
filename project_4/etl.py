@@ -20,7 +20,6 @@ import pyspark.sql.functions as F
 
 from pyspark.sql import Window
 
-
 config = configparser.ConfigParser()
 config.read('dl.cfg')
 
@@ -36,11 +35,12 @@ def create_spark_session():
         .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
         .getOrCreate()
 
-    sc=spark.sparkContext
-    hadoop_conf=sc._jsc.hadoopConfiguration()
-    hadoop_conf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-    hadoop_conf.set("fs.s3a.awsAccessKeyId", os.getenv('AWS_ACCESS_KEY_ID'))
-    hadoop_conf.set("fs.s3a.awsSecretAccessKey", os.getenv('AWS_SECRET_ACCESS_KEY'))
+    # For use when running on local machine
+    #sc=spark.sparkContext
+    #hadoop_conf=sc._jsc.hadoopConfiguration()
+    #hadoop_conf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+    #hadoop_conf.set("fs.s3a.awsAccessKeyId", os.getenv('AWS_ACCESS_KEY_ID'))
+    #hadoop_conf.set("fs.s3a.awsSecretAccessKey", os.getenv('AWS_SECRET_ACCESS_KEY'))
 
     return spark
 
@@ -76,7 +76,7 @@ def process_song_data(spark, input_data, output_data):
     
     print(f"Writing to: {output_data+'song/'}...")
     # write songs table to parquet files partitioned by year and artist
-    #songs_table.write.mode("overwrite").partitionBy("year", "artist_id").parquet(output_data+"song/songs.parquet")
+    songs_table.write.mode("overwrite").partitionBy("year", "artist_id").parquet(output_data+"song/songs.parquet")
     print(f"Writing to: {output_data+'song/'} completed.")
     
     
@@ -88,12 +88,12 @@ def process_song_data(spark, input_data, output_data):
     
     print(f"Writing to: {output_data+'artist/'}...")
     # write artists table to parquet files
-    #artists_table.write.mode("overwrite").parquet(output_data+"artist/artists.parquet")
+    artists_table.write.mode("overwrite").parquet(output_data+"artist/artists.parquet")
     print(f"Writing to: {output_data+'artist/'} completed.")
     
     # Create temp view to create songplay_table later
-    songs_table.createOrReplaceTempView("song_table")
-    artists_table.createOrReplaceTempView("artist_table")
+    songs_table.createGlobalTempView("song_table")
+    artists_table.createGlobalTempView("artist_table")
     
 def process_log_data(spark, input_data, output_data):
     """
@@ -131,7 +131,7 @@ def process_log_data(spark, input_data, output_data):
     
     print(f"Writing to: {output_data+'user/'}...")
     # write users table to parquet files
-    #users_table.write.mode("overwrite").parquet(output_data+"user/users.parquet")
+    users_table.write.mode("overwrite").parquet(output_data+"user/users.parquet")
     print(f"Writing to: {output_data+'user/'} completed.")
 
     # create timestamp column from original timestamp column
@@ -150,7 +150,7 @@ def process_log_data(spark, input_data, output_data):
     
     print(f"Writing to: {output_data+'time/'}...")
     # write time table to parquet files partitioned by year and month
-    #time_table.write.mode("overwrite").partitionBy("year", "month").parquet(output_data+"time/times.parquet")
+    time_table.write.mode("overwrite").partitionBy("year", "month").parquet(output_data+"time/times.parquet")
     print(f"Writing to: {output_data+'time/'} completed.")
 
     # read in song data to use for songplays table
@@ -166,25 +166,26 @@ def process_log_data(spark, input_data, output_data):
     song_df = song_df.withColumn("songplay_id", F.monotonically_increasing_id())
     
     # Create the songplay table to use sql to finish songplay table
-    song_df.createOrReplaceTempView("songplay_table")
+    song_df.createGlobalTempView("songplay_table")
 
     # Create the artist and song table to later merge data for songplays_table
     artist_song_df = spark.sql("""
         SELECT a.artist_id, song_id, name, title
-        FROM artist_table AS a
-        JOIN song_table AS s ON a.artist_id = s.artist_id
+        FROM global_temp.artist_table AS a
+        JOIN global_temp.song_table AS s ON a.artist_id = s.artist_id
     """)
+    artist_song_df.createGlobalTempView("artist_song_table")
     
     # extract columns from joined song and log datasets to create songplays table 
     songplays_table = spark.sql("""
             SELECT songplay_id, start_time, user_id, level, song_id, artist_id, session_id, location, user_agent
-            FROM songplay_table AS sp
-            LEFT JOIN artist_song_table AS ast ON sp.song = ast.title AND sp.artist = ast.name
+            FROM global_temp.songplay_table AS sp
+            JOIN global_temp.artist_song_table AS ast ON sp.song = ast.title AND sp.artist = ast.name
     """)
 
     print(f"Writing to: {output_data+'songplay/'}...")
     # write songplays table to parquet files partitioned by year and month
-    #songplays_table.write.mode("overwrite").partitionBy("year", "month").parquet(output_data+"songplay/songplays.parquet")
+    songplays_table.write.mode("overwrite").partitionBy("year", "month").parquet(output_data+"songplay/songplays.parquet")
     print(f"Writing to: {output_data+'songplay/'} completed.")
 
 
