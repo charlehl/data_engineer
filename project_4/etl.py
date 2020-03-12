@@ -23,31 +23,41 @@ from pyspark.sql import Window
 config = configparser.ConfigParser()
 config.read('dl.cfg')
 
-os.environ["AWS_ACCESS_KEY_ID"]= config['AWS']['AWS_ACCESS_KEY_ID']
-os.environ["AWS_SECRET_ACCESS_KEY"]= config['AWS']['AWS_SECRET_ACCESS_KEY']
+os.environ['AWS_ACCESS_KEY_ID']= config['AWS']['AWS_ACCESS_KEY_ID']
+os.environ['AWS_SECRET_ACCESS_KEY']= config['AWS']['AWS_SECRET_ACCESS_KEY']
+
+# Change to 1 to build on local host
+local_build = 0
+
 
 def create_spark_session():
     """
         Create spark session for ETL
     """
+    global local_build
+
     spark = SparkSession \
         .builder \
         .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
+        .appName("sparkify_etl_pipeline") \
         .getOrCreate()
 
+    spark.sparkContext.setLogLevel("ERROR")
     # For use when running on local machine
-    #sc=spark.sparkContext
-    #hadoop_conf=sc._jsc.hadoopConfiguration()
-    #hadoop_conf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-    #hadoop_conf.set("fs.s3a.awsAccessKeyId", os.getenv('AWS_ACCESS_KEY_ID'))
-    #hadoop_conf.set("fs.s3a.awsSecretAccessKey", os.getenv('AWS_SECRET_ACCESS_KEY'))
+    if local_build == 1:
+        sc=spark.sparkContext
+        hadoop_conf=sc._jsc.hadoopConfiguration()
+        hadoop_conf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+        hadoop_conf.set("fs.s3a.awsAccessKeyId", os.getenv('AWS_ACCESS_KEY_ID'))
+        hadoop_conf.set("fs.s3a.awsSecretAccessKey", os.getenv('AWS_SECRET_ACCESS_KEY'))
+        hadoop_conf.set("fs.s3a.fast.upload", "true")
 
     return spark
 
 @udf
 def parseArtistLocUDF(line):
     """
-        line - line of input column location, clears out hrefs and returns Null for those values
+        line - line of input column location, clears out hrefs and returns empty string
     """
     import re
     PATTERN = "^<a\shref"
@@ -55,7 +65,7 @@ def parseArtistLocUDF(line):
     if match is None:
         return line
     else:
-        return NullType()
+        return ''
     
 def process_song_data(spark, input_data, output_data):
     """
@@ -74,10 +84,10 @@ def process_song_data(spark, input_data, output_data):
     # extract columns to create songs table
     songs_table = df.select(["song_id", "title", "artist_id", "year", "duration"]).dropDuplicates()
     
-    print(f"Writing to: {output_data+'song/'}...")
+    print(f"Writing to: {output_data+'songs/'}...")
     # write songs table to parquet files partitioned by year and artist
-    songs_table.write.mode("overwrite").partitionBy("year", "artist_id").parquet(output_data+"song/songs.parquet")
-    print(f"Writing to: {output_data+'song/'} completed.")
+    songs_table.write.partitionBy('year', 'artist_id').parquet(os.path.join(output_data, 'songs/songs.parquet'), 'overwrite')
+    print(f"Writing to: {output_data+'songs/'} completed.")
     
     
     # extract columns to create artists table
@@ -86,14 +96,14 @@ def process_song_data(spark, input_data, output_data):
     artists_table = artists_table.dropDuplicates().withColumn("artist_location", parseArtistLocUDF("artist_location"))
     artists_table = artists_table.withColumnRenamed("artist_name", "name")
     
-    print(f"Writing to: {output_data+'artist/'}...")
+    print(f"Writing to: {output_data+'artists/'}...")
     # write artists table to parquet files
-    artists_table.write.mode("overwrite").parquet(output_data+"artist/artists.parquet")
-    print(f"Writing to: {output_data+'artist/'} completed.")
-    
+    artists_table.write.parquet(os.path.join(output_data, 'artists/artists.parquet'), 'overwrite')
+    print(f"Writing to: {output_data+'artists/'} completed.")
+
     # Create temp view to create songplay_table later
-    songs_table.createGlobalTempView("song_table")
-    artists_table.createGlobalTempView("artist_table")
+    songs_table.createOrReplaceGlobalTempView("song_table")
+    artists_table.createOrReplaceGlobalTempView("artist_table")
     
 def process_log_data(spark, input_data, output_data):
     """
@@ -129,10 +139,10 @@ def process_log_data(spark, input_data, output_data):
                  .withColumnRenamed("firstName", "first_name")\
                  .withColumnRenamed("lastName", "last_name")
     
-    print(f"Writing to: {output_data+'user/'}...")
+    print(f"Writing to: {output_data+'users/'}...")
     # write users table to parquet files
-    users_table.write.mode("overwrite").parquet(output_data+"user/users.parquet")
-    print(f"Writing to: {output_data+'user/'} completed.")
+    users_table.write.parquet(os.path.join(output_data, "users/users.parquet"), 'overwrite')
+    print(f"Writing to: {output_data+'users/'} completed.")
 
     # create timestamp column from original timestamp column
     time_df = df.select("ts")
@@ -148,10 +158,12 @@ def process_log_data(spark, input_data, output_data):
     
     time_table = time_table.drop("ts").dropDuplicates()
     
-    print(f"Writing to: {output_data+'time/'}...")
+    print(f"Writing to: {output_data+'times/'}...")
     # write time table to parquet files partitioned by year and month
-    time_table.write.mode("overwrite").partitionBy("year", "month").parquet(output_data+"time/times.parquet")
-    print(f"Writing to: {output_data+'time/'} completed.")
+    time_table.write.partitionBy("year", "month").parquet(os.path.join(output_data, 'times/times.parquet'), 'overwrite')
+    print(f"Writing to: {output_data+'times/'} completed.")
+
+    time_table.createOrReplaceGlobalTempView("time_table")
 
     # read in song data to use for songplays table
     song_df = df.select("ts", "userId", "level", "sessionId", "location", "userAgent", "song", "artist")
@@ -166,7 +178,7 @@ def process_log_data(spark, input_data, output_data):
     song_df = song_df.withColumn("songplay_id", F.monotonically_increasing_id())
     
     # Create the songplay table to use sql to finish songplay table
-    song_df.createGlobalTempView("songplay_table")
+    song_df.createOrReplaceGlobalTempView("songplay_table")
 
     # Create the artist and song table to later merge data for songplays_table
     artist_song_df = spark.sql("""
@@ -174,33 +186,42 @@ def process_log_data(spark, input_data, output_data):
         FROM global_temp.artist_table AS a
         JOIN global_temp.song_table AS s ON a.artist_id = s.artist_id
     """)
-    artist_song_df.createGlobalTempView("artist_song_table")
+    artist_song_df.createOrReplaceGlobalTempView("artist_song_table")
     
     # extract columns from joined song and log datasets to create songplays table 
     songplays_table = spark.sql("""
-            SELECT songplay_id, start_time, user_id, level, song_id, artist_id, session_id, location, user_agent
+            SELECT songplay_id, start_time, user_id, level, song_id, artist_id, session_id, location, user_agent, year, month
             FROM global_temp.songplay_table AS sp
             JOIN global_temp.artist_song_table AS ast ON sp.song = ast.title AND sp.artist = ast.name
+            JOIN global_temp.time_table AS t ON sp.start_time = t.start_time
     """)
 
-    print(f"Writing to: {output_data+'songplay/'}...")
+    print(f"Writing to: {output_data+'songplays/'}...")
     # write songplays table to parquet files partitioned by year and month
-    songplays_table.write.mode("overwrite").partitionBy("year", "month").parquet(output_data+"songplay/songplays.parquet")
-    print(f"Writing to: {output_data+'songplay/'} completed.")
+    songplays_table.write.partitionBy("year", "month").parquet(os.path.join(output_data, "songplays/songplays.parquet"), 'overwrite')
+    print(f"Writing to: {output_data+'songplays/'} completed.")
 
 
 def main():
     """
         Main function for starting ETL pipeline
     """
+    global local_build
+    
     spark = create_spark_session()
     input_data = "s3a://udacity-dend/"
-    output_data = "s3a://udacity-chl/"
+    if local_build == 1:
+        print("Using Local build...")
+        output_data = "../../temp/"
+    else:
+        output_data = "s3a://udacity-chl/"
     
     print("Begin data lake pipeline...")
     process_song_data(spark, input_data, output_data)    
     process_log_data(spark, input_data, output_data)
     print("Data lake pipeline completed.")
+
+    spark.stop()
 
 
 if __name__ == "__main__":
