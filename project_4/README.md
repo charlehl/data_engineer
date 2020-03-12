@@ -1,11 +1,23 @@
 # Project 4 README
 
 ## How to run project
-- Run scirpt etl.py
+- Start Up EMR
+- Login to EMR cluster
+- Change to use Python3 for Spark
+- Copy Over etl.py and dl.cfg to cluster
+- spark-submit etl.py
 
 ## File Overview
 - etl.py - ETL script to read song and log data from S3 and load into a star schema DB in Amazon Redshift.
 - README.md - Markdown README for project
+- dl.cfg - Not checked into repository, contains AWS access key and secret access key.
+
+```
+# File Format for dl.cfg:
+[AWS]
+AWS_ACCESS_KEY_ID=<KEY>
+AWS_SECRET_ACCESS_KEY=<SECRET_KEY>
+```
 
 ## ETL Table Schema
 
