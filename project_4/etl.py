@@ -55,20 +55,7 @@ def create_spark_session():
         hadoop_conf.set("fs.s3a.fast.upload", "true")
 
     return spark
-
-@udf
-def parseArtistLocUDF(line):
-    """
-        line - line of input column location, clears out hrefs and returns empty string
-    """
-    import re
-    PATTERN = "^<a\shref"
-    match = re.search(PATTERN, line)
-    if match is None:
-        return line
-    else:
-        return ''
-    
+   
 def process_song_data(spark, input_data, output_data):
     """
         spark - spark session
@@ -95,7 +82,7 @@ def process_song_data(spark, input_data, output_data):
     # extract columns to create artists table
     artists_table = df.select(["artist_id", "artist_name", "artist_location", "artist_latitude", "artist_longitude"])
     # Certain location have a href so let's get rid of those
-    artists_table = artists_table.dropDuplicates().withColumn("artist_location", parseArtistLocUDF("artist_location"))
+    artists_table = artists_table.dropDuplicates()
     artists_table = artists_table.withColumnRenamed("artist_name", "name")
     
     print(f"Writing to: {output_data+'artists/'}...")
