@@ -42,7 +42,9 @@ def create_spark_session():
         .appName("sparkify_etl_pipeline") \
         .getOrCreate()
 
+    # Only show logs for errors
     spark.sparkContext.setLogLevel("ERROR")
+
     # For use when running on local machine
     if local_build == 1:
         sc=spark.sparkContext
@@ -190,7 +192,7 @@ def process_log_data(spark, input_data, output_data):
     
     # extract columns from joined song and log datasets to create songplays table 
     songplays_table = spark.sql("""
-            SELECT songplay_id, start_time, user_id, level, song_id, artist_id, session_id, location, user_agent, year, month
+            SELECT songplay_id, sp.start_time, user_id, level, song_id, artist_id, session_id, location, user_agent, year, month
             FROM global_temp.songplay_table AS sp
             JOIN global_temp.artist_song_table AS ast ON sp.song = ast.title AND sp.artist = ast.name
             JOIN global_temp.time_table AS t ON sp.start_time = t.start_time
