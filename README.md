@@ -10,3 +10,5 @@ Repository for Data Engineering Projects and Learning
   - ETL Script with Apache Cassandra: Created an ETL script to read data from CSV source files, clean and transform data to be stored in an Apache Cassandra backend.  Created tables to partition data based upon query requirements.  Also created a test script to query data from Cassandra backend for testing and validation purposes.
 - Project 4:
   - ETL Script Data Lake: Created an ETL script to load data from S3.  Data is cleaned and formatted to create tables for a star schema optimized queries for analysis and written to S3 for storage.  The ETL process is done using PySpark.
+- Project 5:
+  - ETL pipeline using Apache Airflow.  Pipeline copies data from S3 bucket to staging tables in Amazon Redshift.  From staging tables, fact and dimension tables are created for song play analysis using a star-schema based design.
