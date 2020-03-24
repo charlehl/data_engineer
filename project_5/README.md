@@ -1,8 +1,7 @@
 # Project 5 README
 
 # Overview
-Create custom operators to build an ETL pipeline in Apache Airflow.  Pipeline copies data from S3 bucket into Amazon Redshift staging table.
-Fact and dimension tables are then created from the staging tables.  Lastly data quality checks are run to insure that data is read and transformed properly.
+Create custom operators to build an ETL pipeline in Apache Airflow.  Pipeline copies data from S3 bucket into Amazon Redshift staging table.  Fact and dimension tables are then created from the staging tables.  Lastly data quality checks are run to ensure that data is read and transformed properly.
 
 ## Pipeline DAG
 ![image](./example-dag.png)
