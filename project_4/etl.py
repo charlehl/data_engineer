@@ -75,7 +75,9 @@ def process_song_data(spark, input_data, output_data):
            
     print(f"Writing to: {output_data+'songs/'}...")
     # write songs table to parquet files partitioned by year and artist
-    songs_table.write.partitionBy('year', 'artist_id').parquet(os.path.join(output_data, 'songs/songs.parquet'), 'overwrite')
+    # try repartition to speed up write
+    songs_table.repartition(col('year'), col('month')). \
+    write.partitionBy('year', 'artist_id').parquet(os.path.join(output_data, 'songs/songs.parquet'), 'overwrite')
     print(f"Writing to: {output_data+'songs/'} completed.")
     
     
